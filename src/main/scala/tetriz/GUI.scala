@@ -10,21 +10,25 @@ import javafx.scene.paint.Color
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import scalaz.std.anyVal._
+import scalaz.std.tuple._
+import scalaz.syntax.monoid._
+
 class GUI extends Application {
 
-  var tetriz = Tetriz.newStage
+  var tetriz = Tetriz()
 
   def draw(g: GraphicsContext, x: Int, y: Int) = {
-    val width = GUI.width / Tetriz.width
-    val height = GUI.height / Tetriz.height
+    val width = GUI.width / Field.width
+    val height = GUI.height / Field.height
     g.fillRect(x * width, y * height, width, height)
   }
 
   def paint(g: GraphicsContext) = {
     g.clearRect(0, 0, GUI.width, GUI.height)
     for (point <- tetriz.piece) {
-      val p = point + tetriz.position
-      draw(g, p.x, p.y)
+      val p = point |+| tetriz.position
+      draw(g, Point.x.get(p), Point.y.get(p))
     }
     for ((line, y) <- tetriz.field.zipWithIndex)
       for ((bit, x) <- line.zipWithIndex if bit)
@@ -52,17 +56,11 @@ class GUI extends Application {
     stage.setScene(scene)
     stage.show
     Future {
-      val width = GUI.width / Tetriz.width
-      val height = GUI.height / Tetriz.height
       while (true) {
-        try {
-          tetriz = Tetriz.run(0, 1, 0).exec(tetriz)
-          Platform.runLater(new Runnable {
-            def run = paint(g)
-          })
-        } catch {
-          case e => println(e)
-        }
+        tetriz = Tetriz.run(0, 1, 0).exec(tetriz)
+        Platform.runLater(new Runnable {
+          def run = paint(g)
+        })
         Thread.sleep(1000)
       }
     }
